@@ -109,7 +109,7 @@ export default function Login() {
               fontSize: '16px',
               fontWeight: '500'
             }}>
-              2025-II NOVIEMBRE
+              2026 ENERO
             </div>
             <div style={{ 
               marginTop: '8px', 
