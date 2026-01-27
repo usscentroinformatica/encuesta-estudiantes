@@ -1,27 +1,193 @@
 // src/pages/Formulario.tsx
 import { useState, useEffect } from 'react'
 import logoUss from '../assets/uss.png'
+import estrellaImg from '../assets/estrella.png' // Importa la imagen de estrella
 
 const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzUBmWu9k8AxxAWfjpxkYRl97mrPsxxqRXWwJ7M8eFLQtgHKRyinH_rnuj9GdLVTcKd/exec"
 
+// PREGUNTAS LARGAS EXACTAS COMO LAS QUIERES
 const preguntas = [
-  "¿El docente inicia sus clases puntualmente?",
-  "¿Explica los temas de manera clara?",
-  "¿Usa ejemplos prácticos para facilitar el aprendizaje?",
-  "¿Promueve la participación en clase?",
-  "¿Responde oportunamente los correos electrónicos?",
-  "¿Qué tan satisfecho/a estás con el curso?"
+  "¿El docente inicia sus clases puntualmente y cumple con el horario establecido?",
+  "¿Explica los temas de manera clara y comprensible?",
+  "¿Relaciona la teoría con ejemplos o aplicaciones prácticas que facilitan el aprendizaje?",
+  "¿Promueve la participación y el intercambio de ideas durante la clase?",
+  "¿Con qué frecuencia tu docente responde los correos electrónicos que le envías?",
+  "Si tuvieras que calificar el curso en general, ¿Cuántas estrellas le darías?"
 ]
 
-const opciones = ["Muy en desacuerdo", "En desacuerdo", "Neutral", "De acuerdo", "Muy de acuerdo"]
+// Opciones para las primeras 4 preguntas
+const opcionesFrecuencia = ["Nunca", "Rara vez", "A veces", "Frecuentemente", "Siempre"]
+
+// Opciones ESPECIALES para la pregunta 5 (correos electrónicos)
+const opcionesCorreos = [
+  "Siempre responde de inmediato",
+  "Responde, pero demora un poco", 
+  "Casi nunca responde",
+  "Nunca me ha respondido"
+]
 
 const TOTAL_PREGUNTAS = preguntas.length
 
 // Función para limpiar el nombre del curso (quitar el PEAD)
 const limpiarNombreCurso = (cursoCompleto: string) => {
-  // Elimina "- PEAD-a", "- PEAD-b", etc. del final
   return cursoCompleto.replace(/\s*-\s*PEAD-[a-z]$/i, '').trim();
 }
+
+// Función para obtener opciones según el índice
+const getOpcionesParaPregunta = (index: number) => {
+  // Preguntas 1-4: opciones de frecuencia
+  // Pregunta 5 (índice 4): opciones especiales de correos
+  // Pregunta 6 (índice 5): estrellas (manejada separadamente)
+  return index < 4 ? opcionesFrecuencia : 
+         index === 4 ? opcionesCorreos : 
+         opcionesFrecuencia; // Esto no se usa para estrellas
+}
+
+// Componente para mostrar estrellas
+const EstrellasRating = ({ 
+  seleccionada, 
+  onChange, 
+  disabled 
+}: { 
+  seleccionada: number;
+  onChange: (valor: number) => void;
+  disabled: boolean;
+}) => {
+  return (
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      gap: '10px',
+      marginTop: '15px'
+    }}>
+      {/* Contenedor de estrellas */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: '15px',
+        padding: '15px',
+        backgroundColor: '#f9f9f9',
+        borderRadius: '12px',
+        width: '100%',
+        maxWidth: '500px'
+      }}>
+        {[1, 2, 3, 4, 5].map(num => (
+          <div
+            key={num}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              cursor: disabled ? 'not-allowed' : 'pointer',
+              padding: '10px',
+              borderRadius: '10px',
+              transition: 'all 0.3s ease',
+              transform: seleccionada >= num ? 'scale(1.1)' : 'scale(1)',
+              backgroundColor: seleccionada >= num ? 'rgba(255, 215, 0, 0.1)' : 'transparent',
+              border: seleccionada >= num ? '2px solid #FFD700' : '2px solid transparent'
+            }}
+            onClick={() => !disabled && onChange(num)}
+            onMouseEnter={(e) => {
+              if (!disabled) {
+                e.currentTarget.style.transform = 'scale(1.15)';
+                e.currentTarget.style.backgroundColor = 'rgba(255, 215, 0, 0.15)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!disabled) {
+                e.currentTarget.style.transform = seleccionada >= num ? 'scale(1.1)' : 'scale(1)';
+                e.currentTarget.style.backgroundColor = seleccionada >= num ? 'rgba(255, 215, 0, 0.1)' : 'transparent';
+              }
+            }}
+          >
+            <img 
+              src={estrellaImg} 
+              alt={`${num} estrella${num !== 1 ? 's' : ''}`}
+              style={{
+                width: '40px',
+                height: '40px',
+                display: 'block',
+                filter: seleccionada >= num 
+                  ? 'drop-shadow(0 0 6px gold) brightness(1.1)' 
+                  : 'grayscale(0.4) opacity(0.7)',
+                transition: 'all 0.3s ease'
+              }}
+            />
+            <div style={{
+              textAlign: 'center',
+              fontSize: '13px',
+              fontWeight: 'bold',
+              marginTop: '6px',
+              color: seleccionada >= num ? '#5a2290' : '#888',
+              backgroundColor: seleccionada >= num ? '#FFD700' : '#f0f0f0',
+              padding: '4px 8px',
+              borderRadius: '12px',
+              minWidth: '24px'
+            }}>
+              {num}
+            </div>
+          </div>
+        ))}
+      </div>
+      
+      {/* Texto descriptivo debajo de las estrellas */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: '20px',
+        marginTop: '10px',
+        width: '100%',
+        maxWidth: '500px'
+      }}>
+        <div style={{
+          textAlign: 'center',
+          fontSize: '14px',
+          color: '#5a2290',
+          fontWeight: '600',
+          backgroundColor: '#f0f7ff',
+          padding: '8px 16px',
+          borderRadius: '8px',
+          border: '1px solid #d0e0ff'
+        }}>
+          {seleccionada === 0 ? '⬅ Selecciona una calificación' :
+           seleccionada === 1 ? '😞 Muy insatisfecho' :
+           seleccionada === 2 ? '😐 Insatisfecho' :
+           seleccionada === 3 ? '😐 Regular' :
+           seleccionada === 4 ? '🙂 Satisfecho' : '😊 Muy satisfecho'}
+        </div>
+        
+        <div style={{
+          textAlign: 'center',
+          fontSize: '12px',
+          color: '#666',
+          fontStyle: 'italic'
+        }}>
+          {seleccionada > 0 ? `Calificación: ${seleccionada}/5` : ''}
+        </div>
+      </div>
+      
+      {/* Leyenda de significado */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        width: '100%',
+        maxWidth: '500px',
+        marginTop: '5px',
+        fontSize: '11px',
+        color: '#777'
+      }}>
+        <span>1 = Muy insatisfecho</span>
+        <span>2 = Insatisfecho</span>
+        <span>3 = Regular</span>
+        <span>4 = Satisfecho</span>
+        <span>5 = Muy satisfecho</span>
+      </div>
+    </div>
+  );
+};
 
 // Iconos SVG con colores personalizados
 const BookIcon = () => (
@@ -89,6 +255,7 @@ export default function Formulario() {
   const [datos, setDatos] = useState<any>(null)
   const [cursoSel, setCursoSel] = useState('')
   const [respuestas, setRespuestas] = useState<string[]>(Array(TOTAL_PREGUNTAS).fill(''))
+  const [estrellasSeleccionadas, setEstrellasSeleccionadas] = useState<number>(0)
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState('')
   const [exitoModal, setExitoModal] = useState(false)
@@ -113,11 +280,17 @@ export default function Formulario() {
   }
 
   const info = datos.cursos.find((c: any) => c.curso === cursoSel) || datos.cursos[0]
-  const progreso = respuestas.filter(r => r !== '').length
+  const progreso = respuestas.filter(r => r !== '').length + (estrellasSeleccionadas > 0 ? 1 : 0)
   const porcentaje = Math.round((progreso / TOTAL_PREGUNTAS) * 100)
 
   const enviar = async () => {
-    if (respuestas.some(r => !r)) {
+    // Verificar todas las respuestas incluyendo estrellas
+    const respuestasCompletas = respuestas.every((r, i) => {
+      if (i === 5) return true; // La pregunta 6 se maneja con estrellas
+      return r !== '';
+    });
+    
+    if (!respuestasCompletas || estrellasSeleccionadas === 0) {
       setError("Por favor responde todas las preguntas antes de enviar")
       window.scrollTo({ top: 0, behavior: 'smooth' })
       return
@@ -129,6 +302,10 @@ export default function Formulario() {
       // Limpiar el nombre del curso antes de enviar
       const cursoLimpio = limpiarNombreCurso(info.curso)
       
+      // Crear respuestas finales incluyendo las estrellas
+      const respuestasFinales = [...respuestas];
+      respuestasFinales[5] = `${estrellasSeleccionadas} estrella${estrellasSeleccionadas !== 1 ? 's' : ''}`;
+      
       const datosEnvio = {
         action: 'submit',
         email: datos.email,
@@ -136,10 +313,8 @@ export default function Formulario() {
         curso: cursoLimpio, // Usa el curso limpio (sin PEAD)
         pead: info.pead,
         docente: info.docente,
-        respuestas: respuestas.join('|||')
+        respuestas: respuestasFinales.join('|||')
       }
-      
-      console.log("Datos a enviar:", datosEnvio); // Para depuración
       
       const formData = new URLSearchParams()
       Object.entries(datosEnvio).forEach(([k, v]) => formData.append(k, v as string))
@@ -225,7 +400,12 @@ export default function Formulario() {
                   <div style={{ position: 'relative' }}>
                     <select 
                       value={cursoSel}
-                      onChange={e => { setCursoSel(e.target.value); setRespuestas(Array(TOTAL_PREGUNTAS).fill('')); setError('') }}
+                      onChange={e => { 
+                        setCursoSel(e.target.value); 
+                        setRespuestas(Array(TOTAL_PREGUNTAS).fill('')); 
+                        setEstrellasSeleccionadas(0);
+                        setError(''); 
+                      }}
                       style={{
                         width: '100%',
                         padding: '14px 16px',
@@ -282,9 +462,9 @@ export default function Formulario() {
                 </div>
               </div>
             </div>
-            {/* FIN SECCIÓN RENOVADA */}
 
-            {preguntas.map((p, i) => (
+            {/* PREGUNTAS 1-4 */}
+            {preguntas.slice(0, 4).map((p, i) => (
               <div key={i} style={{
                 marginBottom: '32px', padding: '24px',
                 border: respuestas[i] ? '3px solid #63ed12' : '1px solid #dadce0',
@@ -305,7 +485,7 @@ export default function Formulario() {
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {opciones.map(opt => (
+                  {getOpcionesParaPregunta(i).map(opt => (
                     <label key={opt} style={{
                       display: 'flex', alignItems: 'center', cursor: 'pointer',
                       padding: '16px 18px', borderRadius: '10px',
@@ -318,7 +498,12 @@ export default function Formulario() {
                     onMouseLeave={e => { if (respuestas[i] !== opt) e.currentTarget.style.backgroundColor = 'transparent' }}>
                       <input
                         type="radio" name={`q${i}`} checked={respuestas[i] === opt}
-                        onChange={() => { const nuevo = [...respuestas]; nuevo[i] = opt; setRespuestas(nuevo); setError('') }}
+                        onChange={() => { 
+                          const nuevo = [...respuestas]; 
+                          nuevo[i] = opt; 
+                          setRespuestas(nuevo); 
+                          setError(''); 
+                        }}
                         disabled={enviando}
                         style={{ marginRight: '16px', transform: 'scale(1.5)', accentColor: '#63ed12', cursor: 'pointer' }}
                       />
@@ -329,10 +514,103 @@ export default function Formulario() {
               </div>
             ))}
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '50px', flexWrap: 'wrap', gap: '16px' }}>
-              <button onClick={() => { if (window.confirm('¿Limpiar todas las respuestas?')) setRespuestas(Array(TOTAL_PREGUNTAS).fill('')) }}
+            {/* PREGUNTA 5: CORREOS ELECTRÓNICOS */}
+            <div style={{
+              marginBottom: '32px', padding: '24px',
+              border: respuestas[4] ? '3px solid #63ed12' : '1px solid #dadce0',
+              borderRadius: '12px',
+              backgroundColor: respuestas[4] ? '#e8f5e1' : 'white',
+              transition: 'all 0.4s ease',
+              boxShadow: respuestas[4] ? '0 6px 20px rgba(99, 237, 18, 0.2)' : 'none'
+            }}>
+              <div style={{ fontSize: '14.5px', color: '#202124', marginBottom: '18px', fontWeight: '500', lineHeight: '1.6' }}>
+                <span style={{
+                  backgroundColor: respuestas[4] ? '#63ed12' : '#5a2290',
+                  color: 'white', padding: '6px 12px', borderRadius: '8px',
+                  marginRight: '12px', fontSize: '13px', fontWeight: 'bold'
+                }}>
+                  E
+                </span>
+                {preguntas[4]} <span style={{ color: '#d93025' }}>*</span>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {getOpcionesParaPregunta(4).map(opt => (
+                  <label key={opt} style={{
+                    display: 'flex', alignItems: 'center', cursor: 'pointer',
+                    padding: '16px 18px', borderRadius: '10px',
+                    backgroundColor: respuestas[4] === opt ? '#63ed12' : 'transparent',
+                    color: respuestas[4] === opt ? 'white' : '#202124',
+                    fontWeight: respuestas[4] === opt ? '600' : '400',
+                    fontSize: '16px', transition: 'all 0.25s ease'
+                  }}
+                  onMouseEnter={e => { if (respuestas[4] !== opt) e.currentTarget.style.backgroundColor = '#f5f5f5' }}
+                  onMouseLeave={e => { if (respuestas[4] !== opt) e.currentTarget.style.backgroundColor = 'transparent' }}>
+                    <input
+                      type="radio" name={`q4`} checked={respuestas[4] === opt}
+                      onChange={() => { 
+                        const nuevo = [...respuestas]; 
+                        nuevo[4] = opt; 
+                        setRespuestas(nuevo); 
+                        setError(''); 
+                      }}
+                      disabled={enviando}
+                      style={{ marginRight: '16px', transform: 'scale(1.5)', accentColor: '#63ed12', cursor: 'pointer' }}
+                    />
+                    <span>{opt}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* PREGUNTA 6: ESTRELLAS */}
+            <div style={{
+              marginBottom: '32px', padding: '24px',
+              border: estrellasSeleccionadas > 0 ? '3px solid #FFD700' : '1px solid #dadce0',
+              borderRadius: '12px',
+              backgroundColor: estrellasSeleccionadas > 0 ? '#fff9e6' : 'white',
+              transition: 'all 0.4s ease',
+              boxShadow: estrellasSeleccionadas > 0 ? '0 6px 20px rgba(255, 215, 0, 0.3)' : 'none'
+            }}>
+              <div style={{ fontSize: '14.5px', color: '#202124', marginBottom: '18px', fontWeight: '500', lineHeight: '1.6' }}>
+                <span style={{
+                  backgroundColor: estrellasSeleccionadas > 0 ? '#FFD700' : '#5a2290',
+                  color: estrellasSeleccionadas > 0 ? '#333' : 'white', 
+                  padding: '6px 12px', borderRadius: '8px',
+                  marginRight: '12px', fontSize: '13px', fontWeight: 'bold'
+                }}>
+                  F
+                </span>
+                {preguntas[5]} <span style={{ color: '#d93025' }}>*</span>
+              </div>
+
+              <EstrellasRating 
+                seleccionada={estrellasSeleccionadas}
+                onChange={(valor) => {
+                  setEstrellasSeleccionadas(valor);
+                  setError('');
+                }}
                 disabled={enviando}
-                style={{ backgroundColor: 'transparent', color: enviando ? '#ccc' : '#5a2290', border: `1px solid ${enviando ? '#ccc' : '#5a2290'}`, padding: '12px 28px', borderRadius: '8px', fontWeight: '500' }}>
+              />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '50px', flexWrap: 'wrap', gap: '16px' }}>
+              <button onClick={() => { 
+                if (window.confirm('¿Limpiar todas las respuestas?')) {
+                  setRespuestas(Array(TOTAL_PREGUNTAS).fill(''));
+                  setEstrellasSeleccionadas(0);
+                }
+              }}
+                disabled={enviando}
+                style={{ 
+                  backgroundColor: 'transparent', 
+                  color: enviando ? '#ccc' : '#5a2290', 
+                  border: `1px solid ${enviando ? '#ccc' : '#5a2290'}`, 
+                  padding: '12px 28px', 
+                  borderRadius: '8px', 
+                  fontWeight: '500',
+                  cursor: enviando ? 'not-allowed' : 'pointer'
+                }}>
                 Limpiar formulario
               </button>
 
@@ -340,11 +618,28 @@ export default function Formulario() {
                 style={{
                   backgroundColor: (enviando || progreso < TOTAL_PREGUNTAS) ? '#f1f3f4' : '#5a2290',
                   color: (enviando || progreso < TOTAL_PREGUNTAS) ? '#9aa0a6' : 'white',
-                  border: 'none', padding: '14px 36px', borderRadius: '8px',
-                  fontWeight: '600', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '10px'
+                  border: 'none', 
+                  padding: '14px 36px', 
+                  borderRadius: '8px',
+                  fontWeight: '600', 
+                  fontSize: '15px', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '10px',
+                  cursor: (enviando || progreso < TOTAL_PREGUNTAS) ? 'not-allowed' : 'pointer'
                 }}
-                onMouseEnter={e => { if (!enviando && progreso >= TOTAL_PREGUNTAS) { e.currentTarget.style.backgroundColor = '#63ed12'; e.currentTarget.style.color = 'black' }}}
-                onMouseLeave={e => { if (!enviando && progreso >= TOTAL_PREGUNTAS) { e.currentTarget.style.backgroundColor = '#5a2290'; e.currentTarget.style.color = 'white' }}}>
+                onMouseEnter={e => { 
+                  if (!enviando && progreso >= TOTAL_PREGUNTAS) { 
+                    e.currentTarget.style.backgroundColor = '#63ed12'; 
+                    e.currentTarget.style.color = 'black' 
+                  }
+                }}
+                onMouseLeave={e => { 
+                  if (!enviando && progreso >= TOTAL_PREGUNTAS) { 
+                    e.currentTarget.style.backgroundColor = '#5a2290'; 
+                    e.currentTarget.style.color = 'white' 
+                  }
+                }}>
                 {enviando ? <>Enviando... <SendIcon /></> : 'Enviar encuesta'}
               </button>
             </div>
