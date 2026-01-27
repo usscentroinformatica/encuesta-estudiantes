@@ -15,7 +15,13 @@ const preguntas = [
 
 const opciones = ["Muy en desacuerdo", "En desacuerdo", "Neutral", "De acuerdo", "Muy de acuerdo"]
 
-const TOTAL_PREGUNTAS = preguntas.length // Esto será 6
+const TOTAL_PREGUNTAS = preguntas.length
+
+// Función para limpiar el nombre del curso (quitar el PEAD)
+const limpiarNombreCurso = (cursoCompleto: string) => {
+  // Elimina "- PEAD-a", "- PEAD-b", etc. del final
+  return cursoCompleto.replace(/\s*-\s*PEAD-[a-z]$/i, '').trim();
+}
 
 // Iconos SVG con colores personalizados
 const BookIcon = () => (
@@ -120,15 +126,21 @@ export default function Formulario() {
     setError('')
 
     try {
+      // Limpiar el nombre del curso antes de enviar
+      const cursoLimpio = limpiarNombreCurso(info.curso)
+      
       const datosEnvio = {
         action: 'submit',
         email: datos.email,
         nombre: info.nombre,
-        curso: info.curso,
+        curso: cursoLimpio, // Usa el curso limpio (sin PEAD)
         pead: info.pead,
         docente: info.docente,
         respuestas: respuestas.join('|||')
       }
+      
+      console.log("Datos a enviar:", datosEnvio); // Para depuración
+      
       const formData = new URLSearchParams()
       Object.entries(datosEnvio).forEach(([k, v]) => formData.append(k, v as string))
 
@@ -244,7 +256,10 @@ export default function Formulario() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '12px', backgroundColor: '#f0f7ff', borderRadius: '10px' }}>
                   <BookIcon />
                   <div>
-                    <strong style={{ color: '#5a2290' }}>Curso:</strong> <span style={{ marginLeft: '8px', color: '#202124' }}>{info.curso}</span>
+                    <strong style={{ color: '#5a2290' }}>Curso:</strong> 
+                    <span style={{ marginLeft: '8px', color: '#202124' }}>
+                      {limpiarNombreCurso(info.curso)} {/* Muestra el curso limpio */}
+                    </span>
                   </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '12px', backgroundColor: '#e8f5e1', borderRadius: '10px' }}>
