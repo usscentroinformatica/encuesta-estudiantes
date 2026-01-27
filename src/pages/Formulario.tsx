@@ -20,10 +20,7 @@ const opcionesFrecuencia = ["Nunca", "Rara vez", "A veces", "Frecuentemente", "S
 
 // Opciones ESPECIALES para la pregunta 5 (correos electrónicos)
 const opcionesCorreos = [
-  "Siempre responde de inmediato",
-  "Responde, pero demora un poco", 
-  "Casi nunca responde",
-  "Nunca me ha respondido"
+  "Nunca", "Rara vez", "A veces", "Frecuentemente", "Siempre"
 ]
 
 const TOTAL_PREGUNTAS = preguntas.length
@@ -152,7 +149,7 @@ const EstrellasRating = ({
           borderRadius: '8px',
           border: '1px solid #d0e0ff'
         }}>
-          {seleccionada === 0 ? '⬅ Selecciona una calificación' :
+          {seleccionada === 0 ? 'Selecciona una calificación' :
            seleccionada === 1 ? '😞 Muy insatisfecho' :
            seleccionada === 2 ? '😐 Insatisfecho' :
            seleccionada === 3 ? '😐 Regular' :
