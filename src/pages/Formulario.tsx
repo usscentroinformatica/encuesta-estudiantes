@@ -5,19 +5,17 @@ import logoUss from '../assets/uss.png'
 const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzUBmWu9k8AxxAWfjpxkYRl97mrPsxxqRXWwJ7M8eFLQtgHKRyinH_rnuj9GdLVTcKd/exec"
 
 const preguntas = [
-  "¿El docente presenta las diapositivas de manera clara y organizada al inicio de la sesión?",
-  "¿Expone los objetivos de la sesión y los relaciona con los temas desarrollados?",
-  "¿Los temas tratados durante la clase se ajustan a los objetivos planteados?",
-  "¿La explicación de los contenidos es clara y facilita la comprensión?",
-  "¿El docente realiza una práctica guiada que permite aplicar lo aprendido paso a paso?",
-  "¿La práctica guiada es suficiente para que los estudiantes comprendan el procedimiento?",
-  "¿El docente deja una práctica individual para que los estudiantes la desarrollen por su cuenta?",
-  "¿La práctica individual está bien planteada y permite reforzar lo aprendido en la sesión?",
-  "¿El docente presenta conclusiones claras al finalizar la sesión?",
-  "¿Las conclusiones ayudan a relacionar los contenidos vistos con los objetivos iniciales?"
+  "¿El docente inicia sus clases puntualmente?",
+  "¿Explica los temas de manera clara?",
+  "¿Usa ejemplos prácticos para facilitar el aprendizaje?",
+  "¿Promueve la participación en clase?",
+  "¿Responde oportunamente los correos electrónicos?",
+  "¿Qué tan satisfecho/a estás con el curso?"
 ]
 
-const opciones = ["Nunca", "Rara vez", "A veces", "Frecuentemente", "Siempre"]
+const opciones = ["Muy en desacuerdo", "En desacuerdo", "Neutral", "De acuerdo", "Muy de acuerdo"]
+
+const TOTAL_PREGUNTAS = preguntas.length // Esto será 6
 
 // Iconos SVG con colores personalizados
 const BookIcon = () => (
@@ -84,7 +82,7 @@ const SendIcon = () => (
 export default function Formulario() {
   const [datos, setDatos] = useState<any>(null)
   const [cursoSel, setCursoSel] = useState('')
-  const [respuestas, setRespuestas] = useState<string[]>(Array(10).fill(''))
+  const [respuestas, setRespuestas] = useState<string[]>(Array(TOTAL_PREGUNTAS).fill(''))
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState('')
   const [exitoModal, setExitoModal] = useState(false)
@@ -110,7 +108,7 @@ export default function Formulario() {
 
   const info = datos.cursos.find((c: any) => c.curso === cursoSel) || datos.cursos[0]
   const progreso = respuestas.filter(r => r !== '').length
-  const porcentaje = Math.round((progreso / 10) * 100)
+  const porcentaje = Math.round((progreso / TOTAL_PREGUNTAS) * 100)
 
   const enviar = async () => {
     if (respuestas.some(r => !r)) {
@@ -187,14 +185,14 @@ export default function Formulario() {
             <div style={{ marginBottom: '32px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '14px', color: '#5f6368' }}>
                 <span>Progreso de la encuesta</span>
-                <span><strong>{progreso}/10</strong> respondidas</span>
+                <span><strong>{progreso}/{TOTAL_PREGUNTAS}</strong> respondidas</span>
               </div>
               <div style={{ height: '8px', backgroundColor: '#e0e0e0', borderRadius: '4px', overflow: 'hidden' }}>
                 <div style={{ height: '100%', backgroundColor: '#63ed12', width: `${porcentaje}%`, transition: 'width 0.4s ease' }} />
               </div>
             </div>
 
-            {/* SECCIÓN DE INFORMACIÓN DEL ESTUDIANTE - TOTALMENTE RENOVADA */}
+            {/* SECCIÓN DE INFORMACIÓN DEL ESTUDIANTE */}
             <div style={{ 
               background: 'linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%)',
               border: '1px solid #e0e0e0',
@@ -215,7 +213,7 @@ export default function Formulario() {
                   <div style={{ position: 'relative' }}>
                     <select 
                       value={cursoSel}
-                      onChange={e => { setCursoSel(e.target.value); setRespuestas(Array(10).fill('')); setError('') }}
+                      onChange={e => { setCursoSel(e.target.value); setRespuestas(Array(TOTAL_PREGUNTAS).fill('')); setError('') }}
                       style={{
                         width: '100%',
                         padding: '14px 16px',
@@ -317,26 +315,26 @@ export default function Formulario() {
             ))}
 
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '50px', flexWrap: 'wrap', gap: '16px' }}>
-              <button onClick={() => { if (window.confirm('¿Limpiar todas las respuestas?')) setRespuestas(Array(10).fill('')) }}
+              <button onClick={() => { if (window.confirm('¿Limpiar todas las respuestas?')) setRespuestas(Array(TOTAL_PREGUNTAS).fill('')) }}
                 disabled={enviando}
                 style={{ backgroundColor: 'transparent', color: enviando ? '#ccc' : '#5a2290', border: `1px solid ${enviando ? '#ccc' : '#5a2290'}`, padding: '12px 28px', borderRadius: '8px', fontWeight: '500' }}>
                 Limpiar formulario
               </button>
 
-              <button onClick={enviar} disabled={enviando || progreso < 10}
+              <button onClick={enviar} disabled={enviando || progreso < TOTAL_PREGUNTAS}
                 style={{
-                  backgroundColor: (enviando || progreso < 10) ? '#f1f3f4' : '#5a2290',
-                  color: (enviando || progreso < 10) ? '#9aa0a6' : 'white',
+                  backgroundColor: (enviando || progreso < TOTAL_PREGUNTAS) ? '#f1f3f4' : '#5a2290',
+                  color: (enviando || progreso < TOTAL_PREGUNTAS) ? '#9aa0a6' : 'white',
                   border: 'none', padding: '14px 36px', borderRadius: '8px',
                   fontWeight: '600', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '10px'
                 }}
-                onMouseEnter={e => { if (!enviando && progreso >= 10) { e.currentTarget.style.backgroundColor = '#63ed12'; e.currentTarget.style.color = 'black' }}}
-                onMouseLeave={e => { if (!enviando && progreso >= 10) { e.currentTarget.style.backgroundColor = '#5a2290'; e.currentTarget.style.color = 'white' }}}>
+                onMouseEnter={e => { if (!enviando && progreso >= TOTAL_PREGUNTAS) { e.currentTarget.style.backgroundColor = '#63ed12'; e.currentTarget.style.color = 'black' }}}
+                onMouseLeave={e => { if (!enviando && progreso >= TOTAL_PREGUNTAS) { e.currentTarget.style.backgroundColor = '#5a2290'; e.currentTarget.style.color = 'white' }}}>
                 {enviando ? <>Enviando... <SendIcon /></> : 'Enviar encuesta'}
               </button>
             </div>
 
-            {progreso < 10 && !error && (
+            {progreso < TOTAL_PREGUNTAS && !error && (
               <div style={{ marginTop: '24px', padding: '14px', backgroundColor: '#fff8e1', color: '#ff6d00', borderRadius: '8px', textAlign: 'center' }}>
                 Completa todas las preguntas para poder enviar la encuesta
               </div>
