@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import logoUss from '../assets/uss.png'
 
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxIM1WzHw-lEX7f3mnWfV8-NTei-GQVlUhUxGPRYQMzfmlXax3Y4xxSEqb2QFX0PFdH/exec"
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbw15xyy8LBAfDY_s0x-eqA-TBDUkugJT3fFyIuJht5CRGoLBlR23cXhJLI_9BeAlUDB/exec"
 
 export default function Login() {
   const [nombreUsuario, setNombreUsuario] = useState('')
@@ -12,33 +12,50 @@ export default function Login() {
   const emailCompleto = `${nombreUsuario}@uss.edu.pe`.toLowerCase()
 
   const ingresar = async () => {
-    if (!nombreUsuario.trim()) {
-      setError('Ingresa tu usuario')
-      return
-    }
-
-    setLoading(true)
-    setError('')
-
-    try {
-      const url = `https://corsproxy.io/?${encodeURIComponent(
-        WEB_APP_URL + '?email=' + encodeURIComponent(emailCompleto)
-      )}`
-      const res = await fetch(url)
-      const data = await res.json()
-
-      if (data.cursos && data.cursos[0]?.curso !== "Sin cursos asignados") {
-        localStorage.setItem('eval_data', JSON.stringify({ email: emailCompleto, cursos: data.cursos }))
-        window.location.href = '/formulario'
-      } else {
-        setError('Usuario no encontrado o sin cursos asignados')
-      }
-    } catch {
-      setError('Error de conexión. Intenta más tarde.')
-    } finally {
-      setLoading(false)
-    }
+  if (!nombreUsuario.trim()) {
+    setError('Ingresa tu usuario')
+    return
   }
+
+  setLoading(true)
+  setError('')
+
+  try {
+    // 1. Limpiamos la URL de espacios o caracteres raros
+    const cleanEmail = nombreUsuario.trim().toLowerCase() + '@uss.edu.pe';
+    
+    // 2. Usamos una forma más robusta de llamar al script
+    // Nota: Agregamos un timestamp para evitar cache del navegador
+    const finalUrl = `${WEB_APP_URL}?email=${encodeURIComponent(cleanEmail)}&t=${Date.now()}`;
+    
+    // 3. Usamos el proxy pero con una estructura más limpia
+    const proxiedUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(finalUrl)}`;
+
+    const res = await fetch(proxiedUrl);
+    if (!res.ok) throw new Error('Error en el servidor proxy');
+    
+    const container = await res.json();
+    // AllOrigins devuelve la respuesta dentro de una propiedad 'contents' como string
+    const data = JSON.parse(container.contents);
+
+    console.log('RESPUESTA API:', data);
+
+    if (data.cursos && data.cursos.length > 0) {
+      localStorage.setItem('eval_data', JSON.stringify({
+        email: cleanEmail,
+        cursos: data.cursos
+      }));
+      window.location.href = '/formulario';
+    } else {
+      setError('Usuario no encontrado o sin cursos asignados');
+    }
+  } catch (err) {
+    console.error('Error detallado:', err);
+    setError('Error de conexión con el servidor de la universidad.');
+  } finally {
+    setLoading(false);
+  }
+}
 
   return (
     <div style={{ 
