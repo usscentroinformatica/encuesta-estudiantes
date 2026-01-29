@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import logoUss from '../assets/uss.png'
 import estrellaImg from '../assets/estrella.png' // Importa la imagen de estrella
 
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzUBmWu9k8AxxAWfjpxkYRl97mrPsxxqRXWwJ7M8eFLQtgHKRyinH_rnuj9GdLVTcKd/exec"
+// REMOVEMOS WEB_APP_URL ya que ahora usamos el proxy de Netlify Functions
 
 // PREGUNTAS LARGAS EXACTAS COMO LAS QUIERES
 const preguntas = [
@@ -313,17 +313,29 @@ export default function Formulario() {
         respuestas: respuestasFinales.join('|||')
       }
       
-      const formData = new URLSearchParams()
-      Object.entries(datosEnvio).forEach(([k, v]) => formData.append(k, v as string))
-
-      await fetch(WEB_APP_URL, { method: 'POST', body: formData, mode: 'no-cors' })
-      await new Promise(r => setTimeout(r, 1000))
-      setExitoModal(true)
-      localStorage.removeItem('eval_data')
-      setTimeout(() => window.location.href = '/', 5000)
-    } catch {
-      setError('Error al enviar la encuesta. Intenta nuevamente.')
-      setEnviando(false)
+      // USAR EL PROXY DE NETLIFY FUNCTIONS
+      const response = await fetch('/.netlify/functions/google-script-proxy', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(datosEnvio),
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        setExitoModal(true);
+        localStorage.removeItem('eval_data');
+        setTimeout(() => window.location.href = '/', 5000);
+      } else {
+        throw new Error(result.error || 'Error al enviar');
+      }
+      
+    } catch (error) {
+      console.error('Error al enviar:', error);
+      setError('Error al enviar la encuesta. Intenta nuevamente.');
+      setEnviando(false);
     }
   }
 
