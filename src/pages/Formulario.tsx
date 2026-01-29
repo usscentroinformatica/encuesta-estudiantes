@@ -281,63 +281,76 @@ export default function Formulario() {
   const porcentaje = Math.round((progreso / TOTAL_PREGUNTAS) * 100)
 
   const enviar = async () => {
-    // Verificar todas las respuestas incluyendo estrellas
-    const respuestasCompletas = respuestas.every((r, i) => {
-      if (i === 5) return true; // La pregunta 6 se maneja con estrellas
-      return r !== '';
-    });
-    
-    if (!respuestasCompletas || estrellasSeleccionadas === 0) {
-      setError("Por favor responde todas las preguntas antes de enviar")
-      window.scrollTo({ top: 0, behavior: 'smooth' })
-      return
-    }
-    setEnviando(true)
-    setError('')
+  // Verificar todas las respuestas incluyendo estrellas
+  const respuestasCompletas = respuestas.every((r, i) => {
+    if (i === 5) return true;
+    return r !== '';
+  });
+  
+  if (!respuestasCompletas || estrellasSeleccionadas === 0) {
+    setError("Por favor responde todas las preguntas antes de enviar");
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    return;
+  }
+  
+  setEnviando(true);
+  setError('');
 
-    try {
-      // Limpiar el nombre del curso antes de enviar
-      const cursoLimpio = limpiarNombreCurso(info.curso)
+  try {
+    const cursoLimpio = limpiarNombreCurso(info.curso);
+    const respuestasFinales = [...respuestas];
+    respuestasFinales[5] = `${estrellasSeleccionadas} estrella${estrellasSeleccionadas !== 1 ? 's' : ''}`;
+    
+    const datosEnvio = {
+      action: 'submit',
+      email: datos.email,
+      nombre: info.nombre,
+      curso: cursoLimpio,
+      pead: info.pead,
+      docente: info.docente,
+      respuestas: respuestasFinales.join('|||')
+    };
+    
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    
+    if (isLocal) {
+      // Desarrollo: usar proxy directo
+      const googleUrl = 'https://script.google.com/macros/s/AKfycbzUBmWu9k8AxxAWfjpxkYRl97mrPsxxqRXWwJ7M8eFLQtgHKRyinH_rnuj9GdLVTcKd/exec';
+      const formData = new URLSearchParams();
+      Object.entries(datosEnvio).forEach(([k, v]) => formData.append(k, v as string));
       
-      // Crear respuestas finales incluyendo las estrellas
-      const respuestasFinales = [...respuestas];
-      respuestasFinales[5] = `${estrellasSeleccionadas} estrella${estrellasSeleccionadas !== 1 ? 's' : ''}`;
-      
-      const datosEnvio = {
-        action: 'submit',
-        email: datos.email,
-        nombre: info.nombre,
-        curso: cursoLimpio, // Usa el curso limpio (sin PEAD)
-        pead: info.pead,
-        docente: info.docente,
-        respuestas: respuestasFinales.join('|||')
-      }
-      
-      // USAR EL PROXY DE NETLIFY FUNCTIONS
-      const response = await fetch('/.netlify/functions/google-script-proxy', {
+      const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(googleUrl)}`;
+      await fetch(proxyUrl, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: formData.toString(),
+      });
+      
+    } else {
+      // Producción Vercel: usar serverless function
+      const response = await fetch('/api/google-script', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(datosEnvio),
       });
       
       const result = await response.json();
       
-      if (result.success) {
-        setExitoModal(true);
-        localStorage.removeItem('eval_data');
-        setTimeout(() => window.location.href = '/', 5000);
-      } else {
-        throw new Error(result.error || 'Error al enviar');
+      if (!result.success) {
+        throw new Error(result.error || 'Error al enviar la encuesta');
       }
-      
-    } catch (error) {
-      console.error('Error al enviar:', error);
-      setError('Error al enviar la encuesta. Intenta nuevamente.');
-      setEnviando(false);
     }
+
+    setExitoModal(true);
+    localStorage.removeItem('eval_data');
+    setTimeout(() => window.location.href = '/', 5000);
+    
+  } catch (error: unknown) {
+    console.error('Error al enviar:', error);
+    setError('Error al enviar la encuesta. Intenta nuevamente.');
+    setEnviando(false);
   }
+};
 
   if (exitoModal) {
     return (
