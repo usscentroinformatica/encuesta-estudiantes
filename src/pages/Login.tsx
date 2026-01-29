@@ -2,8 +2,6 @@
 import { useState } from 'react'
 import logoUss from '../assets/uss.png'
 
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzUBmWu9k8AxxAWfjpxkYRl97mrPsxxqRXWwJ7M8eFLQtgHKRyinH_rnuj9GdLVTcKd/exec"
-
 export default function Login() {
   const [nombreUsuario, setNombreUsuario] = useState('')
   const [loading, setLoading] = useState(false)
@@ -21,22 +19,67 @@ export default function Login() {
     setError('')
 
     try {
-      const url = `https://corsproxy.io/?${encodeURIComponent(
-        WEB_APP_URL + '?email=' + encodeURIComponent(emailCompleto)
-      )}`
-      const res = await fetch(url)
-      const data = await res.json()
+      const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      
+      let url, options;
+
+      if (isLocal) {
+        // LOCAL: Usar proxy alternativo que no requiere activación
+        const googleUrl = `https://script.google.com/macros/s/AKfycbzUBmWu9k8AxxAWfjpxkYRl97mrPsxxqRXWwJ7M8eFLQtgHKRyinH_rnuj9GdLVTcKd/exec?email=${encodeURIComponent(emailCompleto)}`;
+        
+        // Proxy alternativo 1
+        url = `https://api.allorigins.win/get?url=${encodeURIComponent(googleUrl)}`;
+        // O proxy alternativo 2
+        // url = `https://cors-anywhere.herokuapp.com/${googleUrl}`;
+        
+        options = { 
+          method: 'GET',
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+          }
+        };
+      } else {
+        // NETLIFY: Usar funciones
+        url = '/.netlify/functions/google-script-proxy';
+        options = {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: emailCompleto,
+            action: 'login'
+          }),
+        };
+      }
+
+      const response = await fetch(url, options);
+      
+      let data;
+      if (isLocal) {
+        // LOCAL: El proxy allorigins envuelve la respuesta
+        const result = await response.json();
+        data = JSON.parse(result.contents);
+      } else {
+        // NETLIFY: Respuesta directa de nuestra función
+        const result = await response.json();
+        data = result.data || result;
+      }
 
       if (data.cursos && data.cursos[0]?.curso !== "Sin cursos asignados") {
-        localStorage.setItem('eval_data', JSON.stringify({ email: emailCompleto, cursos: data.cursos }))
-        window.location.href = '/formulario'
+        localStorage.setItem('eval_data', JSON.stringify({ 
+          email: emailCompleto, 
+          cursos: data.cursos 
+        }));
+        window.location.href = '/formulario';
       } else {
-        setError('Usuario no encontrado o sin cursos asignados')
+        setError('Usuario no encontrado o sin cursos asignados');
       }
-    } catch {
-      setError('Error de conexión. Intenta más tarde.')
+    } catch (error) {
+      console.error('Error:', error);
+      setError('Error de conexión. Intenta más tarde.');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
@@ -51,7 +94,7 @@ export default function Login() {
       {/* Header Principal con Logo USS */}
       <header style={{ 
         backgroundColor: '#ffffff',
-        borderBottom: '6px solid #63ed12',   // Verde llamativo
+        borderBottom: '6px solid #63ed12',
         boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
       }}>
         <div style={{ 
@@ -92,7 +135,7 @@ export default function Login() {
         }}>
           {/* Banner del Formulario */}
           <div style={{ 
-            backgroundColor: '#5a2290',           // Nuevo morado
+            backgroundColor: '#5a2290',
             color: 'white', 
             padding: '32px 48px', 
             textAlign: 'center' 
