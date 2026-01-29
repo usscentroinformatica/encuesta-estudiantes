@@ -2,7 +2,7 @@
 
 exports.handler = async function(event, context) {
   // URL de tu Google Apps Script
-  const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzUBmWu9k8AxxAWfjpxkYRl97mrPsxxqRXWwJ7M8eFLQtgHKRyinH_rnuj9GdLVTcKd/exec";
+  const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyAGPtXocIv6tmex8K_x484P0FzKnwNyacN9PA-6-2kOsh9wagYXdDD4kYQ1t9z_Alz/exec";
   
   // Configurar headers CORS
   const headers = {
