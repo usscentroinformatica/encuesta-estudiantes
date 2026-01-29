@@ -400,12 +400,7 @@ export default function Login() {
                 color: '#1565c0',
                 borderLeft: '4px solid #2196f3'
               }}>
-                <strong>Nota:</strong> Si tienes problemas en Netlify, intenta:
-                <ul style={{ margin: '8px 0 0 20px', padding: 0 }}>
-                  <li>Recargar la página</li>
-                  <li>Usar Chrome o Firefox</li>
-                  <li>Deshabilitar bloqueadores de anuncios</li>
-                </ul>
+                
               </div>
             )}
           </div>
