@@ -2,13 +2,13 @@
 
 exports.handler = async function(event, context) {
   // URL de tu Google Apps Script
-  const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyAGPtXocIv6tmex8K_x484P0FzKnwNyacN9PA-6-2kOsh9wagYXdDD4kYQ1t9z_Alz/exec";
+  const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzUBmWu9k8AxxAWfjpxkYRl97mrPsxxqRXWwJ7M8eFLQtgHKRyinH_rnuj9GdLVTcKd/exec";
   
   // Configurar headers CORS
   const headers = {
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type, Accept',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Content-Type': 'application/json',
   };
   
@@ -22,12 +22,13 @@ exports.handler = async function(event, context) {
   }
   
   try {
+    console.log('Event body:', event.body);
+    console.log('HTTP Method:', event.httpMethod);
+    
     let url = GOOGLE_SCRIPT_URL;
     let options = {
       method: event.httpMethod,
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
+      redirect: 'follow', // IMPORTANTE: Seguir redirecciones
     };
     
     // Manejar GET requests (para login)
@@ -40,42 +41,65 @@ exports.handler = async function(event, context) {
     
     // Manejar POST requests (para enviar formulario)
     if (event.httpMethod === 'POST') {
-      // Parsear el body si viene como JSON string
-      let body;
+      let bodyData;
+      
       if (event.body) {
         try {
           const parsedBody = JSON.parse(event.body);
-          // Convertir de JSON a URLSearchParams
-          const formData = new URLSearchParams();
-          Object.keys(parsedBody).forEach(key => {
-            formData.append(key, parsedBody[key]);
-          });
-          body = formData.toString();
+          console.log('Parsed body:', parsedBody);
+          
+          // Si es una acción de login, usar GET con parámetros
+          if (parsedBody.action === 'login' && parsedBody.email) {
+            url += '?email=' + encodeURIComponent(parsedBody.email);
+            options.method = 'GET';
+          } else {
+            // Para submit, usar POST con form data
+            const formData = new URLSearchParams();
+            Object.keys(parsedBody).forEach(key => {
+              formData.append(key, parsedBody[key]);
+            });
+            bodyData = formData.toString();
+            options.headers = {
+              'Content-Type': 'application/x-www-form-urlencoded',
+            };
+          }
         } catch (e) {
+          console.log('Error parsing body:', e);
           // Si ya viene como form-urlencoded, usarlo directamente
-          body = event.body;
+          bodyData = event.body;
+          options.headers = {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          };
         }
       }
-      options.body = body;
+      
+      if (bodyData) {
+        options.body = bodyData;
+      }
     }
     
     console.log('Proxying to:', url);
-    console.log('Options:', { method: options.method, hasBody: !!options.body });
+    console.log('Options:', options);
     
     // Hacer la solicitud al Google Script
     const response = await fetch(url, options);
+    console.log('Response status:', response.status);
     
     // Intentar leer como texto primero
     const responseText = await response.text();
+    console.log('Response text:', responseText);
     
     let responseData;
     try {
       // Intentar parsear como JSON
       responseData = JSON.parse(responseText);
     } catch (e) {
+      console.log('Not valid JSON, returning as text');
       // Si no es JSON válido, devolver como texto
       responseData = { text: responseText };
     }
+    
+    console.log('Response data:', responseData);
     
     // Devolver respuesta exitosa
     return {
