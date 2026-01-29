@@ -5,7 +5,6 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   
-  // Manejar preflight
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
@@ -16,16 +15,15 @@ export default async function handler(req, res) {
     let url = GOOGLE_SCRIPT_URL;
     let options = { method: req.method };
     
-    // Manejar GET (login)
+    // GET para login
     if (req.method === 'GET') {
       if (req.query.email) {
         url += `?email=${encodeURIComponent(req.query.email)}`;
       }
     }
     
-    // Manejar POST (submit formulario)
+    // POST para enviar formulario
     if (req.method === 'POST') {
-      // Convertir JSON a FormData
       const formData = new URLSearchParams();
       for (const [key, value] of Object.entries(req.body)) {
         formData.append(key, value);
@@ -35,26 +33,25 @@ export default async function handler(req, res) {
       options.body = formData.toString();
     }
     
-    console.log('Proxying to:', url);
+    console.log('Enviando a Google Script:', url);
     const response = await fetch(url, options);
-    const data = await response.text();
+    const text = await response.text();
     
-    // Intentar parsear como JSON
     try {
-      const jsonData = JSON.parse(data);
-      return res.status(response.status).json({
-        success: response.ok,
+      const jsonData = JSON.parse(text);
+      return res.status(200).json({
+        success: true,
         data: jsonData
       });
     } catch {
-      return res.status(response.status).json({
-        success: response.ok,
-        data: { text: data }
+      return res.status(200).json({
+        success: true,
+        data: { text: text }
       });
     }
     
   } catch (error) {
-    console.error('Proxy error:', error);
+    console.error('Error en función:', error);
     return res.status(500).json({
       success: false,
       error: error.message
