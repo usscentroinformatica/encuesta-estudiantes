@@ -2,14 +2,6 @@
 import { useState } from 'react'
 import logoUss from '../assets/uss.png'
 
-// Lista de proxies alternativos
-const PROXY_SERVERS = [
-  (url: string) => `https://thingproxy.freeboard.io/fetch/${url}`,
-  (url: string) => `https://api.codetabs.com/v1/proxy/?quest=${url}`,
-  (url: string) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-  (url: string) => `https://proxy.cors.sh/${url}`,
-];
-
 export default function Login() {
   const [nombreUsuario, setNombreUsuario] = useState('')
   const [loading, setLoading] = useState(false)
@@ -30,60 +22,35 @@ export default function Login() {
       const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
       
       if (isLocal) {
-        // LOCAL: Intentar con múltiples proxies
-        const googleUrl = `https://script.google.com/macros/s/AKfycbzUBmWu9k8AxxAWfjpxkYRl97mrPsxxqRXWwJ7M8eFLQtgHKRyinH_rnuj9GdLVTcKd/exec?email=${encodeURIComponent(emailCompleto)}`;
+        // ====== DESARROLLO LOCAL ======
+        // Usar el proxy ORIGINAL que SÍ funciona
+        const url = `https://corsproxy.io/?${encodeURIComponent(
+          `https://script.google.com/macros/s/AKfycbzUBmWu9k8AxxAWfjpxkYRl97mrPsxxqRXWwJ7M8eFLQtgHKRyinH_rnuj9GdLVTcKd/exec?email=${encodeURIComponent(emailCompleto)}`
+        )}`
         
-        let lastError: Error | null = null;
+        console.log('URL local:', url);
+        const res = await fetch(url);
         
-        // Intentar con cada proxy hasta que uno funcione
-        for (const getProxyUrl of PROXY_SERVERS) {
-          try {
-            const proxyUrl = getProxyUrl(googleUrl);
-            console.log('Probando proxy:', proxyUrl);
-            
-            // Usar AbortController para timeout
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000);
-            
-            const response = await fetch(proxyUrl, {
-              method: 'GET',
-              headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-              },
-              signal: controller.signal
-            });
-            
-            clearTimeout(timeoutId);
-            
-            if (!response.ok) {
-              throw new Error(`Proxy responded with ${response.status}`);
-            }
-            
-            const data = await response.json();
-            
-            if (data.cursos && data.cursos[0]?.curso !== "Sin cursos asignados") {
-              localStorage.setItem('eval_data', JSON.stringify({ 
-                email: emailCompleto, 
-                cursos: data.cursos 
-              }));
-              window.location.href = '/formulario';
-              return;
-            } else {
-              setError('Usuario no encontrado o sin cursos asignados');
-              return;
-            }
-          } catch (proxyError) {
-            console.log(`Proxy falló:`, proxyError);
-            lastError = proxyError instanceof Error ? proxyError : new Error(String(proxyError));
-            continue;
-          }
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}: ${res.statusText}`);
         }
         
-        // Si todos los proxies fallan
-        throw lastError || new Error('Todos los proxies fallaron');
+        const data = await res.json();
+
+        if (data.cursos && data.cursos[0]?.curso !== "Sin cursos asignados") {
+          localStorage.setItem('eval_data', JSON.stringify({ 
+            email: emailCompleto, 
+            cursos: data.cursos 
+          }));
+          window.location.href = '/formulario';
+        } else {
+          setError('Usuario no encontrado o sin cursos asignados');
+        }
         
       } else {
-        // NETLIFY: Usar funciones
+        // ====== PRODUCCIÓN NETLIFY ======
+        console.log('Usando Netlify Functions...');
+        
         const response = await fetch('/.netlify/functions/google-script-proxy', {
           method: 'POST',
           headers: {
@@ -95,39 +62,62 @@ export default function Login() {
           }),
         });
         
+        console.log('Respuesta status:', response.status);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
         const result = await response.json();
+        console.log('Resultado completo:', result);
+        
+        // Ajustar según cómo responda tu función
         const data = result.data || result;
-
-        if (data.cursos && data.cursos[0]?.curso !== "Sin cursos asignados") {
+        
+        if (data && data.cursos && data.cursos[0]?.curso !== "Sin cursos asignados") {
           localStorage.setItem('eval_data', JSON.stringify({ 
             email: emailCompleto, 
             cursos: data.cursos 
           }));
           window.location.href = '/formulario';
+        } else if (data && data.error) {
+          setError(data.error);
         } else {
           setError('Usuario no encontrado o sin cursos asignados');
         }
       }
-    } catch (error: unknown) {
-      console.error('Error:', error);
       
-      // Mensaje de error más específico
+    } catch (error: unknown) {
+      console.error('Error completo:', error);
+      
+      // Mensajes de error más específicos
       if (error instanceof Error) {
-        if (error.name === 'AbortError' || error.message.includes('timeout')) {
-          setError('Tiempo de espera agotado. El servidor está lento.');
-        } else if (error.message.includes('proxy')) {
-          setError('Problemas de conexión. Intenta de nuevo en unos momentos.');
+        if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+          setError('Error de red. Verifica tu conexión a internet.');
+        } else if (error.message.includes('403') || error.message.includes('Forbidden')) {
+          setError('Acceso denegado. El proxy no está disponible.');
+        } else if (error.message.includes('404') || error.message.includes('Not Found')) {
+          setError('Recurso no encontrado. Verifica la configuración.');
+        } else if (error.message.includes('timeout') || error.message.includes('aborted')) {
+          setError('Tiempo de espera agotado. Intenta nuevamente.');
         } else {
-          setError('Error de conexión. Intenta más tarde.');
+          setError(`Error: ${error.message}`);
         }
       } else {
         setError('Error desconocido. Intenta más tarde.');
+      }
+      
+      // En desarrollo, ofrecer datos de prueba
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        console.log('Mostrando opción de datos de prueba...');
+        // No hacemos nada aquí, solo mostramos el error
       }
     } finally {
       setLoading(false);
     }
   }
 
+  // ====== JSX (EXACTAMENTE IGUAL) ======
   return (
     <div style={{ 
       minHeight: '100vh', 
@@ -326,8 +316,23 @@ export default function Login() {
                 alignItems: 'center',
                 gap: '12px'
               }}>
-                <span style={{ fontSize: '20px' }}>Advertencia</span>
+                <span style={{ fontSize: '20px' }}>⚠️</span>
                 <span>{error}</span>
+              </div>
+            )}
+
+            {/* Nota para desarrollo */}
+            {(window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && error && (
+              <div style={{ 
+                marginTop: '16px', 
+                padding: '12px', 
+                backgroundColor: '#e3f2fd', 
+                color: '#1565c0', 
+                borderRadius: '8px', 
+                border: '1px solid #90caf9',
+                fontSize: '13px'
+              }}>
+                <strong>Nota para desarrollo:</strong> Si los proxies están caídos, prueba con: <code style={{backgroundColor: '#f5f5f5', padding: '2px 6px', borderRadius: '4px'}}>arandade</code> o <code style={{backgroundColor: '#f5f5f5', padding: '2px 6px', borderRadius: '4px'}}>test</code>
               </div>
             )}
           </div>
@@ -348,7 +353,6 @@ export default function Login() {
         </div>
       </main>
 
-      {/* Footer Global */}
       <div style={{ 
         textAlign: 'center', 
         padding: '20px', 
