@@ -13,49 +13,49 @@ export default function Login() {
 
   const ingresar = async () => {
   if (!nombreUsuario.trim()) {
-    setError('Ingresa tu usuario')
-    return
+    setError('Ingresa tu usuario');
+    return;
   }
 
-  setLoading(true)
-  setError('')
+  setLoading(true);
+  setError('');
 
   try {
-    // 1. Limpiamos la URL de espacios o caracteres raros
     const cleanEmail = nombreUsuario.trim().toLowerCase() + '@uss.edu.pe';
     
-    // 2. Usamos una forma más robusta de llamar al script
-    // Nota: Agregamos un timestamp para evitar cache del navegador
-    const finalUrl = `${WEB_APP_URL}?email=${encodeURIComponent(cleanEmail)}&t=${Date.now()}`;
+    // 1. URL directa sin proxies externos
+    const finalUrl = `${WEB_APP_URL}?email=${encodeURIComponent(cleanEmail)}`;
     
-    // 3. Usamos el proxy pero con una estructura más limpia
-    const proxiedUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(finalUrl)}`;
+    // 2. Petición directa. Google permite CORS si el script está como "Anyone"
+    const res = await fetch(finalUrl, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+      },
+    });
 
-    const res = await fetch(proxiedUrl);
-    if (!res.ok) throw new Error('Error en el servidor proxy');
+    if (!res.ok) throw new Error('Error en la respuesta del servidor');
     
-    const container = await res.json();
-    // AllOrigins devuelve la respuesta dentro de una propiedad 'contents' como string
-    const data = JSON.parse(container.contents);
+    const data = await res.json();
 
     console.log('RESPUESTA API:', data);
 
-    if (data.cursos && data.cursos.length > 0) {
+    if (data.success && data.cursos && data.cursos.length > 0) {
       localStorage.setItem('eval_data', JSON.stringify({
         email: cleanEmail,
         cursos: data.cursos
       }));
       window.location.href = '/formulario';
     } else {
-      setError('Usuario no encontrado o sin cursos asignados');
+      setError('Usuario no encontrado o no tiene cursos asignados.');
     }
   } catch (err) {
     console.error('Error detallado:', err);
-    setError('Error de conexión con el servidor de la universidad.');
+    setError('No se pudo conectar con la base de datos. Verifica tu conexión.');
   } finally {
     setLoading(false);
   }
-}
+};
 
   return (
     <div style={{ 
