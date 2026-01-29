@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import logoUss from '../assets/uss.png'
 
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbw15xyy8LBAfDY_s0x-eqA-TBDUkugJT3fFyIuJht5CRGoLBlR23cXhJLI_9BeAlUDB/exec"
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzUBmWu9k8AxxAWfjpxkYRl97mrPsxxqRXWwJ7M8eFLQtgHKRyinH_rnuj9GdLVTcKd/exec"
 
 export default function Login() {
   const [nombreUsuario, setNombreUsuario] = useState('')
@@ -12,50 +12,33 @@ export default function Login() {
   const emailCompleto = `${nombreUsuario}@uss.edu.pe`.toLowerCase()
 
   const ingresar = async () => {
-  if (!nombreUsuario.trim()) {
-    setError('Ingresa tu usuario');
-    return;
-  }
-
-  setLoading(true);
-  setError('');
-
-  try {
-    const cleanEmail = nombreUsuario.trim().toLowerCase() + '@uss.edu.pe';
-    
-    // 1. URL directa sin proxies externos
-    const finalUrl = `${WEB_APP_URL}?email=${encodeURIComponent(cleanEmail)}`;
-    
-    // 2. Petición directa. Google permite CORS si el script está como "Anyone"
-    const res = await fetch(finalUrl, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-      },
-    });
-
-    if (!res.ok) throw new Error('Error en la respuesta del servidor');
-    
-    const data = await res.json();
-
-    console.log('RESPUESTA API:', data);
-
-    if (data.success && data.cursos && data.cursos.length > 0) {
-      localStorage.setItem('eval_data', JSON.stringify({
-        email: cleanEmail,
-        cursos: data.cursos
-      }));
-      window.location.href = '/formulario';
-    } else {
-      setError('Usuario no encontrado o no tiene cursos asignados.');
+    if (!nombreUsuario.trim()) {
+      setError('Ingresa tu usuario')
+      return
     }
-  } catch (err) {
-    console.error('Error detallado:', err);
-    setError('No se pudo conectar con la base de datos. Verifica tu conexión.');
-  } finally {
-    setLoading(false);
+
+    setLoading(true)
+    setError('')
+
+    try {
+      const url = `https://corsproxy.io/?${encodeURIComponent(
+        WEB_APP_URL + '?email=' + encodeURIComponent(emailCompleto)
+      )}`
+      const res = await fetch(url)
+      const data = await res.json()
+
+      if (data.cursos && data.cursos[0]?.curso !== "Sin cursos asignados") {
+        localStorage.setItem('eval_data', JSON.stringify({ email: emailCompleto, cursos: data.cursos }))
+        window.location.href = '/formulario'
+      } else {
+        setError('Usuario no encontrado o sin cursos asignados')
+      }
+    } catch {
+      setError('Error de conexión. Intenta más tarde.')
+    } finally {
+      setLoading(false)
+    }
   }
-};
 
   return (
     <div style={{ 
