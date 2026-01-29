@@ -1,22 +1,13 @@
 # netlify.toml
-
 [build]
   command = "npm run build"
-  publish = "dist"  # o "build" dependiendo de tu configuración
+  publish = "dist"  # Vite genera la build en "dist"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
 
 [functions]
   directory = "netlify/functions/"
   node_bundler = "esbuild"
-
-[[redirects]]
-  from = "/.netlify/functions/*"
-  to = "/.netlify/functions/:splat"
-  status = 200
-
-# Configuración de headers para CORS
-[[headers]]
-  for = "/.netlify/functions/*"
-  [headers.values]
-    Access-Control-Allow-Origin = "*"
-    Access-Control-Allow-Headers = "Content-Type, Accept"
-    Access-Control-Allow-Methods = "GET, POST, OPTIONS"
