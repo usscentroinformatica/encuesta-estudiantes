@@ -2,6 +2,14 @@
 import { useState } from 'react'
 import logoUss from '../assets/uss.png'
 
+// Lista de proxies alternativos
+const PROXY_SERVERS = [
+  (url: string) => `https://thingproxy.freeboard.io/fetch/${url}`,
+  (url: string) => `https://api.codetabs.com/v1/proxy/?quest=${url}`,
+  (url: string) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+  (url: string) => `https://proxy.cors.sh/${url}`,
+];
+
 export default function Login() {
   const [nombreUsuario, setNombreUsuario] = useState('')
   const [loading, setLoading] = useState(false)
@@ -21,27 +29,62 @@ export default function Login() {
     try {
       const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
       
-      let url, options;
-
       if (isLocal) {
-        // LOCAL: Usar proxy alternativo que no requiere activación
+        // LOCAL: Intentar con múltiples proxies
         const googleUrl = `https://script.google.com/macros/s/AKfycbzUBmWu9k8AxxAWfjpxkYRl97mrPsxxqRXWwJ7M8eFLQtgHKRyinH_rnuj9GdLVTcKd/exec?email=${encodeURIComponent(emailCompleto)}`;
         
-        // Proxy alternativo 1
-        url = `https://api.allorigins.win/get?url=${encodeURIComponent(googleUrl)}`;
-        // O proxy alternativo 2
-        // url = `https://cors-anywhere.herokuapp.com/${googleUrl}`;
+        let lastError: Error | null = null;
         
-        options = { 
-          method: 'GET',
-          headers: {
-            'X-Requested-With': 'XMLHttpRequest'
+        // Intentar con cada proxy hasta que uno funcione
+        for (const getProxyUrl of PROXY_SERVERS) {
+          try {
+            const proxyUrl = getProxyUrl(googleUrl);
+            console.log('Probando proxy:', proxyUrl);
+            
+            // Usar AbortController para timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
+            
+            const response = await fetch(proxyUrl, {
+              method: 'GET',
+              headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+              },
+              signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) {
+              throw new Error(`Proxy responded with ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (data.cursos && data.cursos[0]?.curso !== "Sin cursos asignados") {
+              localStorage.setItem('eval_data', JSON.stringify({ 
+                email: emailCompleto, 
+                cursos: data.cursos 
+              }));
+              window.location.href = '/formulario';
+              return;
+            } else {
+              setError('Usuario no encontrado o sin cursos asignados');
+              return;
+            }
+          } catch (proxyError) {
+            console.log(`Proxy falló:`, proxyError);
+            lastError = proxyError instanceof Error ? proxyError : new Error(String(proxyError));
+            continue;
           }
-        };
+        }
+        
+        // Si todos los proxies fallan
+        throw lastError || new Error('Todos los proxies fallaron');
+        
       } else {
         // NETLIFY: Usar funciones
-        url = '/.netlify/functions/google-script-proxy';
-        options = {
+        const response = await fetch('/.netlify/functions/google-script-proxy', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -50,34 +93,36 @@ export default function Login() {
             email: emailCompleto,
             action: 'login'
           }),
-        };
-      }
-
-      const response = await fetch(url, options);
-      
-      let data;
-      if (isLocal) {
-        // LOCAL: El proxy allorigins envuelve la respuesta
+        });
+        
         const result = await response.json();
-        data = JSON.parse(result.contents);
-      } else {
-        // NETLIFY: Respuesta directa de nuestra función
-        const result = await response.json();
-        data = result.data || result;
-      }
+        const data = result.data || result;
 
-      if (data.cursos && data.cursos[0]?.curso !== "Sin cursos asignados") {
-        localStorage.setItem('eval_data', JSON.stringify({ 
-          email: emailCompleto, 
-          cursos: data.cursos 
-        }));
-        window.location.href = '/formulario';
-      } else {
-        setError('Usuario no encontrado o sin cursos asignados');
+        if (data.cursos && data.cursos[0]?.curso !== "Sin cursos asignados") {
+          localStorage.setItem('eval_data', JSON.stringify({ 
+            email: emailCompleto, 
+            cursos: data.cursos 
+          }));
+          window.location.href = '/formulario';
+        } else {
+          setError('Usuario no encontrado o sin cursos asignados');
+        }
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error:', error);
-      setError('Error de conexión. Intenta más tarde.');
+      
+      // Mensaje de error más específico
+      if (error instanceof Error) {
+        if (error.name === 'AbortError' || error.message.includes('timeout')) {
+          setError('Tiempo de espera agotado. El servidor está lento.');
+        } else if (error.message.includes('proxy')) {
+          setError('Problemas de conexión. Intenta de nuevo en unos momentos.');
+        } else {
+          setError('Error de conexión. Intenta más tarde.');
+        }
+      } else {
+        setError('Error desconocido. Intenta más tarde.');
+      }
     } finally {
       setLoading(false);
     }
