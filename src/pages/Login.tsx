@@ -2,8 +2,7 @@
 import { useState } from 'react'
 import logoUss from '../assets/uss.png'
 
-// USA LA NUEVA URL que creaste
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycby_N8sxngW1YlERHImY12IHdRJA-59NOnPpJLAqNf7e8jPI2KLtnbUhwvJsU-Lgafk/exec"
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzUBmWu9k8AxxAWfjpxkYRl97mrPsxxqRXWwJ7M8eFLQtgHKRyinH_rnuj9GdLVTcKd/exec"
 
 export default function Login() {
   const [nombreUsuario, setNombreUsuario] = useState('')
@@ -22,135 +21,25 @@ export default function Login() {
     setError('')
 
     try {
-      // SOLUCIÓN: Múltiples intentos con diferentes proxies y mejor manejo
-      let data = null
-      let lastError = null
-      
-      // Lista de proxies para intentar
-      const proxyAttempts = [
-        // Opción 1: Directo (puede funcionar con la nueva URL)
-        async () => {
-          console.log('Intentando conexión directa...')
-          const res = await fetch(`${WEB_APP_URL}?email=${encodeURIComponent(emailCompleto)}`)
-          return await res.json()
-        },
-        
-        // Opción 2: corsproxy.io (tu actual)
-        async () => {
-          console.log('Intentando con corsproxy.io...')
-          const url = `https://corsproxy.io/?${encodeURIComponent(
-            WEB_APP_URL + '?email=' + encodeURIComponent(emailCompleto)
-          )}`
-          const res = await fetch(url)
-          return await res.json()
-        },
-        
-        // Opción 3: allorigins.win (alternativa confiable)
-        async () => {
-          console.log('Intentando con allorigins.win...')
-          const url = `https://api.allorigins.win/get?url=${encodeURIComponent(
-            `${WEB_APP_URL}?email=${encodeURIComponent(emailCompleto)}`
-          )}`
-          const res = await fetch(url)
-          const result = await res.json()
-          return JSON.parse(result.contents)
-        },
-        
-        // Opción 4: cors-anywhere (heroku)
-        async () => {
-          console.log('Intentando con cors-anywhere...')
-          const url = `https://cors-anywhere.herokuapp.com/${WEB_APP_URL}?email=${encodeURIComponent(emailCompleto)}`
-          const res = await fetch(url)
-          return await res.json()
-        },
-        
-        // Opción 5: codetabs CORS proxy
-        async () => {
-          console.log('Intentando con codetabs...')
-          const url = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(
-            `${WEB_APP_URL}?email=${encodeURIComponent(emailCompleto)}`
-          )}`
-          const res = await fetch(url)
-          return await res.json()
-        }
-      ]
+      const url = `https://corsproxy.io/?${encodeURIComponent(
+        WEB_APP_URL + '?email=' + encodeURIComponent(emailCompleto)
+      )}`
+      const res = await fetch(url)
+      const data = await res.json()
 
-      // Intentar cada método hasta que uno funcione
-      for (let i = 0; i < proxyAttempts.length; i++) {
-        try {
-          data = await proxyAttempts[i]()
-          console.log(`Proxy ${i + 1} funcionó:`, data)
-          
-          // Verificar que la respuesta es válida
-          if (data && (data.cursos !== undefined || data.error !== undefined)) {
-            break // Salir del loop si tenemos una respuesta válida
-          } else {
-            throw new Error('Respuesta inválida del proxy')
-          }
-        } catch (err: any) {
-          console.log(`Proxy ${i + 1} falló:`, err.message)
-          lastError = err
-          // Continuar con el siguiente proxy
-        }
-      }
-
-      // Si todos fallaron, mostrar error específico
-      if (!data) {
-        throw new Error(
-          lastError?.message || 
-          'Todos los métodos de conexión fallaron. ' +
-          'Verifica tu internet o intenta desde un navegador diferente.'
-        )
-      }
-
-      console.log('RESPUESTA FINAL API:', data)
-
-      // Procesar respuesta
-      if (data.error) {
-        setError(data.error)
-      } else if (data.cursos && Array.isArray(data.cursos) && data.cursos.length > 0) {
-        // Validar que los cursos sean válidos (no "Sin cursos asignados")
-        const cursosValidos = data.cursos.filter((curso: any) => 
-          curso.curso && curso.curso !== "Sin cursos asignados"
-        )
-        
-        if (cursosValidos.length > 0) {
-          localStorage.setItem(
-            'eval_data',
-            JSON.stringify({
-              email: emailCompleto,
-              cursos: cursosValidos
-            })
-          )
-          window.location.href = '/formulario'
-        } else {
-          setError('Usuario no tiene cursos asignados para evaluar')
-        }
-      } else if (data.cursos && Array.isArray(data.cursos) && data.cursos.length === 0) {
-        setError('No tienes cursos asignados para evaluar')
+      if (data.cursos && data.cursos[0]?.curso !== "Sin cursos asignados") {
+        localStorage.setItem('eval_data', JSON.stringify({ email: emailCompleto, cursos: data.cursos }))
+        window.location.href = '/formulario'
       } else {
-        setError('Respuesta inesperada del servidor')
+        setError('Usuario no encontrado o sin cursos asignados')
       }
-
-    } catch (err: any) {
-      console.error('Error completo:', err)
-      
-      // Mensajes de error más específicos
-      if (err.message.includes('Failed to fetch')) {
-        setError('No se pudo conectar al servidor. Verifica tu conexión a internet.')
-      } else if (err.message.includes('Todos los métodos')) {
-        setError('Error de conexión. Intenta desde otro navegador o dispositivo.')
-      } else if (err.message.includes('JSON')) {
-        setError('Error en la respuesta del servidor. Intenta nuevamente.')
-      } else {
-        setError('Error: ' + err.message)
-      }
+    } catch {
+      setError('Error de conexión. Intenta más tarde.')
     } finally {
       setLoading(false)
     }
   }
 
-  // Resto del código JSX se mantiene IGUAL...
   return (
     <div style={{ 
       minHeight: '100vh', 
@@ -162,7 +51,7 @@ export default function Login() {
       {/* Header Principal con Logo USS */}
       <header style={{ 
         backgroundColor: '#ffffff',
-        borderBottom: '6px solid #63ed12',
+        borderBottom: '6px solid #63ed12',   // Verde llamativo
         boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
       }}>
         <div style={{ 
@@ -203,7 +92,7 @@ export default function Login() {
         }}>
           {/* Banner del Formulario */}
           <div style={{ 
-            backgroundColor: '#5a2290',
+            backgroundColor: '#5a2290',           // Nuevo morado
             color: 'white', 
             padding: '32px 48px', 
             textAlign: 'center' 
@@ -299,9 +188,7 @@ export default function Login() {
               justifyContent: 'space-between',
               alignItems: 'center'
             }}>
-              <div style={{ fontSize: '12px', color: '#5f6368' }}>
-                {loading && 'Conectando... (esto puede tomar unos segundos)'}
-              </div>
+              <div></div>
               <button
                 onClick={ingresar}
                 disabled={loading || !nombreUsuario}
@@ -315,9 +202,7 @@ export default function Login() {
                   fontWeight: '500',
                   cursor: loading || !nombreUsuario ? 'not-allowed' : 'pointer',
                   boxShadow: loading || !nombreUsuario ? 'none' : '0 2px 6px rgba(90, 34, 144, 0.4)',
-                  transition: 'all 0.3s ease',
-                  minWidth: '120px',
-                  position: 'relative'
+                  transition: 'all 0.3s ease'
                 }}
                 onMouseEnter={(e) => {
                   if (!loading && nombreUsuario) {
@@ -336,21 +221,7 @@ export default function Login() {
                   }
                 }}
               >
-                {loading ? (
-                  <>
-                    <span style={{
-                      display: 'inline-block',
-                      width: '16px',
-                      height: '16px',
-                      border: '2px solid rgba(255,255,255,0.3)',
-                      borderTopColor: 'white',
-                      borderRadius: '50%',
-                      animation: 'spin 1s linear infinite',
-                      marginRight: '8px'
-                    }} />
-                    Conectando...
-                  </>
-                ) : 'Siguiente'}
+                {loading ? 'Verificando...' : 'Siguiente'}
               </button>
             </div>
 
@@ -367,40 +238,8 @@ export default function Login() {
                 alignItems: 'center',
                 gap: '12px'
               }}>
-                <div style={{ 
-                  width: '24px', 
-                  height: '24px', 
-                  borderRadius: '50%', 
-                  backgroundColor: '#c5221f',
-                  color: 'white',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0
-                }}>
-                  !
-                </div>
-                <div>
-                  <div style={{ fontWeight: '500', marginBottom: '4px' }}>
-                    Error de conexión
-                  </div>
-                  <div style={{ fontSize: '14px' }}>{error}</div>
-                </div>
-              </div>
-            )}
-
-            {/* Información adicional para Netlify */}
-            {!error && !loading && (
-              <div style={{ 
-                marginTop: '24px',
-                padding: '12px',
-                backgroundColor: '#e3f2fd',
-                borderRadius: '6px',
-                fontSize: '12px',
-                color: '#1565c0',
-                borderLeft: '4px solid #2196f3'
-              }}>
-                
+                <span style={{ fontSize: '20px' }}>Advertencia</span>
+                <span>{error}</span>
               </div>
             )}
           </div>
@@ -430,14 +269,6 @@ export default function Login() {
       }}>
         Google Formularios
       </div>
-
-      {/* Estilos para animaciones */}
-      <style>{`
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-      `}</style>
     </div>
   )
 }
