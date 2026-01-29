@@ -48,18 +48,15 @@ export default function Login() {
         }
         
       } else {
-        // ====== PRODUCCIÓN NETLIFY ======
-        console.log('Usando Netlify Functions...');
+        // ====== PRODUCCIÓN VERCEL ======
+        console.log('Usando Vercel Serverless Function...');
         
-        const response = await fetch('/.netlify/functions/google-script-proxy', {
-          method: 'POST',
+        // EN VERCEL: usar /api/google-script con GET
+        const response = await fetch(`/api/google-script?email=${encodeURIComponent(emailCompleto)}`, {
+          method: 'GET',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            email: emailCompleto,
-            action: 'login'
-          }),
         });
         
         console.log('Respuesta status:', response.status);
