@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import logoUss from '../assets/uss.png'
 
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzUBmWu9k8AxxAWfjpxkYRl97mrPsxxqRXWwJ7M8eFLQtgHKRyinH_rnuj9GdLVTcKd/exec"
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxIM1WzHw-lEX7f3mnWfV8-NTei-GQVlUhUxGPRYQMzfmlXax3Y4xxSEqb2QFX0PFdH/exec"
 
 export default function Login() {
   const [nombreUsuario, setNombreUsuario] = useState('')
