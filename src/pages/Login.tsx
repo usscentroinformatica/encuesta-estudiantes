@@ -11,34 +11,7 @@ export default function Login() {
 
   const emailCompleto = `${nombreUsuario}@uss.edu.pe`.toLowerCase()
 
-  const ingresar = async () => {
-    if (!nombreUsuario.trim()) {
-      setError('Ingresa tu usuario')
-      return
-    }
-
-    setLoading(true)
-    setError('')
-
-    try {
-      const url = `https://corsproxy.io/?${encodeURIComponent(
-        WEB_APP_URL + '?email=' + encodeURIComponent(emailCompleto)
-      )}`
-      const res = await fetch(url)
-      const data = await res.json()
-
-      if (data.cursos && data.cursos[0]?.curso !== "Sin cursos asignados") {
-        localStorage.setItem('eval_data', JSON.stringify({ email: emailCompleto, cursos: data.cursos }))
-        window.location.href = '/formulario'
-      } else {
-        setError('Usuario no encontrado o sin cursos asignados')
-      }
-    } catch {
-      setError('Error de conexión. Intenta más tarde.')
-    } finally {
-      setLoading(false)
-    }
-  }
+  arandade
 
   return (
     <div style={{ 
